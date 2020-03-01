@@ -1,0 +1,630 @@
+import TerminalT from './terminal';
+
+# Playing with d3 📈
+
+Creating d3 charts for training purpose.
+
+Il sole 24 ore labs
+
+Made by @brainrepo
+---
+
+
+# Start
+
+- Clone the repo
+
+
+---
+
+# Creazione di un BarChart component
+
+```javascript
+class Barchart{
+    render() {
+    }
+}
+
+export  default  Barchart;
+```
+
+---
+
+# Importiamo d3js
+
+```sh
+npm install d3 --save-dev
+```
+```javascript
+//src/charts/barchart
+
+import * as d3 from "d3";
+
+class Barchart{
+    render() {
+    }
+}
+
+export  default  Barchart;
+```
+
+---
+
+# Inizializzo le proprietà principali del componente
+```javascript
+//src/charts/barchart
+
+...
+class Barchart{
+
+    height;
+    width;
+    mountPoint;
+
+    constructor(width=500, height=200, mountPoint='body') {
+        this.height = height;
+        this.width = width;
+        this.mountPoint = mountPoint;
+    }
+    ...
+}
+...
+```
+
+---
+
+# Genero un svg contenitore
+
+```javascript
+//src/charts/barchart
+constructor(width=500, height=200, mountPoint='body') {
+  ...
+  this.svg = d3.select(mountPoint)
+      .append('svg')
+      .attr('width', this.width)
+      .attr('height', this.height);
+}
+
+```
+
+---
+
+# Implemento il metodo render per renderdizzare i dati
+
+```javascript
+//src/charts/barchart
+...
+render(data) {
+  this.svg
+      .append('g')
+      .attr('id', 'plot-area')
+      .selectAll('rect')
+      .data(data)                           //Bindo i dati
+      .enter()                              //Entro nel ciclo di rendering
+      .append('rect')                       //Creo un rettangolo svg
+      .attr('x',  (d, index) => index * 22) //Lascio 2px di spazio a destra (20<larghezza> + 2<margine>)
+      .attr('y', 0)
+      .attr("width", 20)
+      .attr("height", d => d * 100)
+      .attr('fill', '#D1AB0E');
+}
+
+```
+
+---
+
+# Come posso migliorare la visualizzazione?
+
+La cosa migliore da fare è creare una scala.
+
+> Scales are a convenient abstraction for a fundamental task in visualization: mapping a dimension of abstract data to a visual representation. [...]
+For continuous quantitative data, you typically want a linear scale.  [...]
+For discrete ordinal (ordered) or categorical (unordered) data, an ordinal scale specifies an explicit mapping from a set of data values to a corresponding set of visual attributes (such as colors).
+
+Leggi su [d3-scale](https://github.com/d3/d3-scale)
+
+---
+
+# La scala sulle ascisse
+
+La scala sulle ascisse è una scaleBand
+
+>Constructs a new band scale with the specified domain and range, no padding, no rounding and center alignment. If domain is not specified, it defaults to the empty domain. If range is not specified, it defaults to the unit range [0, 1].
+
+>Given a value in the input domain, returns the start of the corresponding band derived from the output range. If the given value is not in the scale’s domain, returns undefined.
+
+---
+
+# La scala sulle ascisse: scaleBand
+
+```javascript
+let x_scale = d3.scaleBand() 
+            .domain( d3.range(data.length))
+            .rangeRound([0, this.width]) //con round centra il valore
+            .paddingInner(0.05) //aggiunge un padding del 5%
+            .paddingOuter(0)
+        ;
+```
+- **Dominio**: I valori del dominio sono la proprietà per la quale i valori andranno mostrati, 
+in questo caso la banda è una per valore quindi con la funzione range creo un array contenente 
+dei numeri crescenti fino a un massimo dato dal numero delle bande, quindi dal numero dei valori.
+
+
+Vai alla documentazione su [ScaleBand](//https://github.com/d3/d3-scale#band-scales)
+
+---
+
+# La scala sulle ascisse: scaleBand
+
+```javascript
+let x_scale = d3.scaleBand() 
+            .domain( d3.range(data.length))
+            .rangeRound([0, this.width]) //con round centra il valore
+            .paddingInner(0.05) //aggiunge un padding del 5%
+            .paddingOuter(0)
+        ;
+```
+
+- **rangeRound**: Mappo i valori di dominio con un nuovo range grande quanto la larghezza del mio grafico
+
+Vai alla documentazione su [ScaleBand](//https://github.com/d3/d3-scale#band-scales)
+
+---
+
+# La scala sulle ascisse: scaleBand
+
+```javascript
+let x_scale = d3.scaleBand() 
+            .domain( d3.range(data.length))
+            .rangeRound([0, this.width]) //con round centra il valore
+            .paddingInner(0.05) //aggiunge un padding del 5%
+            .paddingOuter(0)
+        ;
+```
+
+- **paddingInner**: Inserisco un padding tra i valori di dimensione 5% della larghezza della banda
+
+- **paddingOuter**: Padding attorno al gruppo di bande
+
+Vai alla documentazione su [ScaleBand](//https://github.com/d3/d3-scale#band-scales)
+
+---
+
+# La scala sulle ordinate
+
+La scala sulle ordinate è una scaleLinear, scala lineare
+
+> Continuous scales map a continuous, quantitative input domain to a continuous output range. If the range is also numeric, the mapping may be inverted. A continuous scale is not constructed directly; instead, try a linear, power, log, identity, radial, time or sequential color scale.
+
+---
+
+
+# La scala sulle ordinate: scaleLinear
+
+```javascript
+let y_scale = d3.scaleLinear() 
+    .domain([0, d3.max(data)])
+    .range([0, this.height])
+    ;
+```
+
+- La scala lineare mappa il dominio in ingresso in un range in uscita
+- Qui mappo da 0 al valore massimo contenuto dentro `data` in un range 
+che va da 0 all'altezza del mio grafico
+
+Vai alla documentazione su [scaleLinear](https://github.com/d3/d3-scale#continuous-scales)
+
+---
+
+# Rendo usabili le scale
+
+Adesso creo un metodo che mi generi le scale
+
+```javascript
+xScale(data) {
+    return d3.scaleBand()
+        .domain( d3.range(data.length))
+        .rangeRound([0, this.width])
+        .paddingInner(0.05)
+        .paddingOuter(0)
+    ;
+}
+```
+
+```javascript
+yScale(data) {
+    return d3.scaleLinear() 
+        .domain([0, d3.max(data)])
+        .range([0, this.height])
+        ;
+}
+```
+
+---
+
+# Aggiorno gli attributi
+
+```javascript
+...
+render(data) {
+  this.svg
+    ...
+      .attr('x',  (d, i) => this.xScale(data)(i))
+      .attr('y', this.yScale(data)(0))
+      .attr("width", this.xScale(data).bandwidth())
+      .attr("height", d => this.yScale(data)(d))
+    ...
+}
+```
+
+- i metodi **xScale** e **yScale** restituiscono funzioni
+- **xScale(data).bandwidth** invece restituisce la larghezza della banda
+
+---
+
+# TopDown
+
+Come puoi vedere il barchart che abbiamo creato è top barchart_top_down
+
+![datboi](./assets/barchart_top_down.png)
+
+---
+
+# Trasformiamo le barre in bottom-up
+
+Before:
+```javascript
+  ...
+  .attr('y', (d) => this.yScale(data)(0))
+```
+
+After
+```javascript
+  ...
+  .attr('y', (d) => this.height - this.yScale(data)(d))
+```
+
+Per farlo sottraggo all'altezza del grafico impostata in
+fase di construct il valore mappato nella scala e 
+imposto il valore risultante nell'attributo y
+
+---
+
+
+# BottomUp
+
+Adesso ho finalmente un barChart bottom up!
+
+![datboi](./assets/barchart_bottom_up.png)
+
+---
+
+# Inserisco le etichette
+
+```javascript
+labels(data) {
+    this.svg
+        .append('g')
+        .attr('id', 'labels')
+        .selectAll('text')
+        .data(data)
+        .enter()
+        .append('text')
+        .text(d => d)
+        .attr('x', (d, i) => this.xScale(data)(i) + this.xScale(data).bandwidth()/2)
+        .attr('y', d => this.height - this.yScale(data)(d) + 24)
+        .attr('font-size', 14)
+        .attr('fill', '#fff')
+        .attr('text-anchor', 'middle');
+}
+
+render(data) {
+    ...
+    this.labels(data);
+}
+```
+
+Per l'inserimento delle etichette creo un metodo che userò nel metodo render
+
+---
+
+# Calcolo della posizione x
+
+```javascript
+.attr('x', (d, i) => this.xScale(data)(i) + this.xScale(data).bandwidth()/2)
+```
+
+Per impostare la posizione x mi calcolo il punto nella x che corrisponde alla
+banda per quel valore e ci sommo la metà della larghezza della banda
+
+```javascript
+.attr('text-anchor', 'middle');
+```
+
+Impostando l'attributo text-anchor nell'elemento di testo sposto il
+punto di ancoraggio da sinistra al centro del testo stesso
+
+---
+
+# Il mio grafico con le 🏷 labels
+
+![datboi](./assets/barchart_with_labels.png)
+
+---
+
+# 🏗 Un po di refactoring
+
+```javascript
+render(data) {
+    this.svg
+        .append('g')
+        .attr('id', 'plot-area')
+    ...
+
+    this.labels(data);
+}
+```
+
+```javascript
+bars(data) {
+    this.svg
+        .append('g')
+        .attr('id', 'plot-area')
+    ...
+}
+
+render(data) {
+  this.bars(data);
+  this.labels(data);
+}
+```
+
+---
+
+# Ammorbidiamolo
+
+Per fare gli angoli meno spigolosi posso settare i due attributi **rx** **ry** per fare i bordi arrotondati
+```javascript
+  .attr("rx", 6)
+  .attr("ry", 6)  
+```
+
+---
+# Ammorbidiamolo
+
+![datboi](./assets/barchart_rounded.png)
+
+---
+
+# Aggiungiamo un margine attorno al grafico
+
+Innanzitutto mi definisco una nuova proprietà padding e la inizializzo dal costruttore
+
+```javascript
+class Barchart{
+
+    ...
+    padding;
+    ...
+
+    constructor(width=500, height=200, mountPoint='body', padding=10) {
+      ...
+      this.padding = padding;
+      ...
+    }
+```
+
+---
+
+# Aggiorno la scala delle ascisse
+
+```javascript
+   xScale(data) {
+        return d3.scaleBand()
+            ....
+            .rangeRound([this.padding, this.width - this.padding ])
+            ....
+        ;
+    }
+```
+
+Adesso il range della scala parte dal valore del padding 
+lasciando quindi il valore del padding a sinistra per i valori 0
+e termina alla dimensione del grafico diminuita del padding, lasciando
+quindi il margine a destra.
+
+**Disclaimer**: Qui uso padding e margine come sinonimi
+
+---
+
+# Aggiorno la scala delle ordinate
+
+```javascript
+yScale(data) {
+  return d3.scaleLinear() 
+    ...
+    .range([this.padding, this.height - this.padding * 2])
+  ;
+}
+```
+
+Adesso il range della scala parte dal valore del padding 
+lasciando quindi il valore del padding sopra per i valori 0
+e termina alla dimensione del grafico diminuita del padding, lasciando
+quindi il margine in basso.
+
+**Disclaimer**: Qui uso padding e margine come sinonimi
+
+---
+
+# Aggiorno le barre con il padding
+
+```javascript
+bars(data) {
+  this.svg
+    .append('g')
+    .attr('id', 'plot-area')
+    ...
+    .attr('y', (d) => this.height - this.padding - this.yScale(data)(d))
+    ...
+}
+```
+
+Adesso la posizione di partenza della barra è pari all'altezza dello stage
+meno il padding - il valore in scala nelle y
+
+---
+
+# Aggiorno le labels con il padding
+
+```javascript
+labels(data) {
+  this.svg
+    ...
+    .attr('y', d => this.height - this.padding - this.yScale(data)(d) + 24)
+    ...
+}
+```
+
+La posizione y è pari all'altezza dello stage - il padding - il valore del dato.
+A questo punto mi trovo nel limite alto della barretta. Per visualizzare il dato dentro la 
+barretta scendo di 24px (dato calcolato empiricamente).
+
+---
+
+# Gli assi
+
+Innanzitutto dobbiamo fixare un piccolo errore sulla assegnazione delle posizione nella scala delle ordinate
+
+```javascript
+yScale(data) {
+  return d3.scaleLinear() 
+    .domain([0, d3.max(data)])
+    .range([this.padding, this.height - this.padding * 2]) //prima
+    .range([this.padding, this.height - this.padding]) //dopo
+...
+}
+```
+
+---
+
+# Gli assi
+
+Innanzitutto dobbiamo fixare un piccolo errore sulla assegnazione nelle altezze e nelle posizioni y
+
+
+```javascript
+//labels
+.attr('y', (d) => this.height - this.padding - this.yScale(data)(d)) //prima
+.attr('y', d => this.height - this.yScale(data)(d) + 24) //dopo
+```
+
+```javascript
+//bars
+.attr('y', (d) => this.height - this.padding - this.yScale(data)(d)) //prima
+.attr('y', (d) => this.height - this.yScale(data)(d)) //dopo
+.attr("height", d => this.yScale(data)(d)) //prima
+.attr("height", d => this.yScale(data)(d) - this.padding) //dopo
+```
+
+---
+
+# Creo l'asse delle x 📏
+
+```javascript
+xAxis(data) {
+    let y_axis = d3.axisBottom(this.xScale(data));
+    this.svg.append('g')
+        .attr('class', 'x-axis')
+        .attr(
+            'transform',
+            'translate(0,' + (this.height - this.padding) + ')'
+        )
+        .call(y_axis);
+}
+```
+
+---
+
+# Creo l'asse delle y 📏
+
+```javascript
+yAxis(data) {
+    let y_axis = d3.axisLeft(this.yScale(data)).ticks(5);
+    this.svg.append('g')
+        .attr('class', 'y-axis')
+        .attr(
+            'transform',
+            'translate( ' + this.padding + ', 0 )'
+        )
+        .call(y_axis);
+}
+```
+
+---
+
+# Inserisco le funzioni di generazione assi al metodo render()
+
+
+    render(data) {
+        this.bars(data);
+        this.labels(data);
+        this.xAxis(data);
+        this.yAxis(data);
+    }
+
+
+---
+
+# Il nostro grafico con assi
+
+![assi](./assets/axis_chart.png)
+
+---
+
+# Ma l'asse delle ordinate è al contrario 🙃?
+
+Si, perche svg conta dall'alto verso il basso. Per risolvere dobbiamo fare alcune semplici operazioni.
+
+     yScale(data) {
+         return d3.scaleLinear() 
+             .domain([0, d3.max(data)])
+             .range([this.padding, this.height - this.padding]) //prima
+             .range([this.height - this.padding, this.padding]) //dopo
+             ;
+     }
+
+Inverto il range in modo da partire dal valore più alto a quello più basso. Questa operazione presuppone alcune piccole correzioni.
+
+---
+
+# Correggo la funzione di render delle label
+
+    .append('text')
+    .text(d => d)
+    .attr('x', (d, i) => this.xScale(data)(i) + this.xScale(data).bandwidth()/2)
+    .attr('y', d => this.height - this.yScale(data)(d) + 24) //prima
+    .attr('y', d => this.height - this.yScale(data)(d3.max(data) - d) + 24) //dopo
+    .attr('font-size', 14)
+    .attr('fill', '#fff')
+    .attr('text-anchor', 'middle');
+
+ 
+---
+
+# Correggo la funzione di render dei rect
+
+    .enter()
+    .append('rect')
+    .attr('x',  (d, i) => this.xScale(data)(i))
+    .attr('y', (d) => this.height - this.yScale(data)(d)) //prima
+    .attr('y', (d) => this.height - this.yScale(data)(d3.max(data) - d)) //dopo
+    .attr("width", this.xScale(data).bandwidth())
+    .attr("height", d => this.yScale(data)(d) - this.padding) //prima
+    .attr("height", d => this.yScale(data)(d3.max(data) - d) - this.padding) //dopo
+    .attr("rx", 6)
+    .attr("ry", 6)            
+    .attr('fill', '#D1AB0E');
+
+
+ 
